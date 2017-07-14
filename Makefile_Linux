@@ -1,0 +1,22 @@
+
+#GNU C Compiler
+CC = gcc
+CCFLAGS = -Wall -I/usr/include/tcl
+
+#To compile on Ubuntu:
+#
+#apt-get install libx11-dev
+#apt-get install mesa-common-dev
+#apt-get install tcl-dev tk-dev
+#apt-get install freeglut3-dev
+
+all: main
+
+main: main.c
+	$(CC) $(CCFLAGS) -o $@ main.c -ltcl -ltk -lGL
+
+.c.o:
+	$(CC) -c $(CCFLAGS) $< -o $@
+
+
+

@@ -52,7 +52,7 @@ pack $bar -fill x
 
 
 #Tell C where to put the OpenGL
-SetRenderWindow [winfo id $display]
+SetRenderWindow $display [winfo id $display]
 
 #Tell C when the window resizes
 bind $display <Configure> {Resize %w %h}

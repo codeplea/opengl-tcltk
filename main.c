@@ -1,8 +1,9 @@
 /*
  * OpenGL example with C and Tcl/Tk
- * Copyright (c) 2015-2017 Lewis Van Winkle
+ * https://codeplea.com/opengl-with-c-and-tcl-tk
  *
- * http://CodePlea.com
+ * Copyright (c) 2015-2017 Lewis Van Winkle
+ * Linux x11 code provided by Todd Norland
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -23,28 +24,43 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#elif __linux__
+#include <X11/Xlib.h>
+#include <GL/glx.h>
+#endif
 
 #include <tcl.h>
 #include <tk.h>
-#include <windows.h>
 #include <GL/gl.h>
 
 
-HDC dc;
-HWND hwnd;
+/* OpenGL Hooks*/
+#ifdef _WIN32
+  HDC dc;
+#elif __linux__
+  Display *__glDisplay__ = (Display *)NULL;
+  Window __glWindow__;
+#endif
 
 
 
 int SetRenderWindow(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
-    //Grab the HWND from Tcl.
-    Tcl_GetIntFromObj(interp, objv[1], (int*)&hwnd);
+#ifdef _WIN32
 
-    //Setup OpenGL.
+    /* Grab the HWND from Tcl. */
+    HWND hwnd;
+    Tcl_GetIntFromObj(interp, objv[2], (int*)&hwnd);
+
+    /* Setup OpenGL. */
     dc = GetDC(hwnd);
 
 
-    //Windows code, setup OpenGL.
+    /* Windows code, setup OpenGL. */
     PIXELFORMATDESCRIPTOR pfd;
     memset(&pfd, 0, sizeof(pfd));
     pfd.nVersion = 1;
@@ -61,14 +77,60 @@ int SetRenderWindow(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj
 
     wglMakeCurrent(dc, rc);
 
+#elif __linux__
+
+    Tk_Window    __glTkwin__;
+    XVisualInfo *__glVisinfo__ = (XVisualInfo *)NULL;
+    int dummy;
+    int attribs[] =
+        {GLX_USE_GL, GLX_RGBA, GLX_DOUBLEBUFFER, GLX_DEPTH_SIZE, 0};
+    GLXContext __glGLXContext__ = (void *)NULL;
+
+    __glTkwin__ = Tk_NameToWindow(interp, Tcl_GetString (objv[1]), Tk_MainWindow(interp));
+    if (__glTkwin__ == NULL) {
+        fprintf(stderr, "__glTkwin__ is NULL\n" );
+        exit(-1);
+    }
+    Tk_MakeWindowExist( __glTkwin__);
+
+    /* setup X11 implementation of OpenGL */
+    __glDisplay__ = Tk_Display(__glTkwin__);
+    if (__glDisplay__ == NULL) {
+        fprintf(stderr, "__glDisplay__ is NULL\n" );
+        exit(-1);
+    }
+    if (!glXQueryExtension(__glDisplay__, &dummy, &dummy)) {
+        fprintf(stderr, "require GLX Extesion\n" );
+        exit(-1);
+    }
+    __glWindow__ = Tk_WindowId( __glTkwin__ );
+
+    __glVisinfo__ =
+         glXChooseVisual( __glDisplay__, DefaultScreen(__glDisplay__), attribs);
+
+    if (__glVisinfo__ == NULL) {
+        fprintf(stderr, "__glVisinfo__ is NULL\n" );
+        exit(-1);
+    }
+
+    __glGLXContext__ =
+         glXCreateContext(__glDisplay__, __glVisinfo__, 0, GL_TRUE);
+    if (__glGLXContext__ == NULL) {
+        fprintf(stderr, "__glGLXContext__ is NULL\n" );
+        exit(-1);
+    }
+    glXMakeCurrent( __glDisplay__, __glWindow__, __glGLXContext__ );
+
+#endif
 
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(1.0, 1.0, 1.0, 0.0f);
     glClearDepth(1.0);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
     glMatrixMode(GL_PROJECTION);
-
 
     return TCL_OK;
 }
@@ -79,7 +141,7 @@ int Resize(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *const o
     int w, h;
     Tcl_GetIntFromObj(interp, objv[1], &w);
     Tcl_GetIntFromObj(interp, objv[2], &h);
-    printf("Resized to: %d x %d.\n", w, h);
+    /* printf("Resized to: %d x %d.\n", w, h); */
 
     float dx = (float)w/h;
     glViewport(0, 0, w, h);
@@ -108,7 +170,7 @@ void Loop(ClientData cd)
     glRotatef(rot, 1.0f, 1.0f, 0.5f);
 
 
-    //Draw a simple cube.
+    /* Draw a simple cube. */
     glBegin(GL_QUADS);
 
     glColor3f(0.0f, 1.0f, 0.0f);
@@ -151,7 +213,11 @@ void Loop(ClientData cd)
 
     glFlush();
 
+#ifdef _WIN32
     SwapBuffers(dc);
+#elif __linux__
+    glXSwapBuffers(__glDisplay__, __glWindow__);
+#endif
 }
 
 
