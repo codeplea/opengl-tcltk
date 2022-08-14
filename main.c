@@ -83,7 +83,7 @@ int SetRenderWindow(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj
     XVisualInfo *__glVisinfo__ = (XVisualInfo *)NULL;
     int dummy;
     int attribs[] =
-        {GLX_USE_GL, GLX_RGBA, GLX_DOUBLEBUFFER, GLX_DEPTH_SIZE, 0};
+        {GLX_USE_GL, GLX_RGBA, GLX_DOUBLEBUFFER, GLX_DEPTH_SIZE, 0, None};
     GLXContext __glGLXContext__ = (void *)NULL;
 
     __glTkwin__ = Tk_NameToWindow(interp, Tcl_GetString (objv[1]), Tk_MainWindow(interp));
